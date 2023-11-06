@@ -121,19 +121,50 @@
             // View flask_brevets.py for details.
             function calc_times(control) {
               var km = control.find("input[name='km']").val();
+
+              // The "much more!" referenced in line 120
+              var brev_dist = $('#brevet_dist_km').val()
+              var start_date = $('#begin_date').val()
+
               var open_time_field = control.find("input[name='open']");
               var close_time_field = control.find("input[name='close']");
 
-              $.getJSON(TIME_CALC_URL, {km: km}).done(
+              // Points to the HTML element of this row's notes field
+              var notes_field = control.find(".notes");
+
+              $.getJSON(TIME_CALC_URL, {km: km, brev_dist:brev_dist, start_date: start_date}).done(
                 function(data) {
                    var times = data.result;
                    console.log("Got a response: ");
                    console.log("Response.open = " + times.open);
-                   // This part will automatically fill the open and close slots,
-                   // so don't worry about those.
+
+                   // Error code handling
+
+                   if(times.ecode){
+                     open_time_field.css("color", "red");
+                     close_time_field.css("color", "red");
+                     notes_field.css("color", "red");
+
+                     // Code 1: Distance is negative or exceeds 1000
+                     if(times.ecode == 1){
+                        notes_field.text("Entered distance is not valid per ACP rules");
+
+                     // Code 2: Checkpoint distance exceeds brevet length
+                     }else if(times.ecode == 2){
+                        notes_field.text("Entered checkpoint distance exceeds brevet length");
+                     }
+
+                   // In case there was an error before, recolor the field black and empty the notes field
+                   }else{
+                     open_time_field.css("color", "black");
+                     close_time_field.css("color", "black");
+                     notes_field.text("");
+                   }
+
+                   // Sends in the correct data regardless of if there was an error or not
                    open_time_field.val(moment(times.open).format("YYYY-MM-DDTHH:mm"));
                    close_time_field.val(moment(times.close).format("YYYY-MM-DDTHH:mm"));
-                 }
+                }
                ).fail(function(err){
                  // In case you get an error...
                  console.log("Error!");

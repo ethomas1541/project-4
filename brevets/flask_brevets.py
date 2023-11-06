@@ -51,17 +51,32 @@ def _calc_times():
     """
     app.logger.debug("Got a JSON request")
     km = request.args.get('km', 999, type=float)
+
+    # Brevet distance and start date
+    brev_dist = request.args.get('brev_dist', 200, type=int)
+    start_date = request.args.get('start_date', type = str)
     app.logger.debug("km={}".format(km))
     app.logger.debug("request.args: {}".format(request.args))
-    # FIXME!
-    # Right now, only the current time is passed as the start time
-    # and control distance is fixed to 200
-    # You should get these from the webpage!
-    open_time = acp_times.open_time(km, 200, arrow.now().isoformat).format('YYYY-MM-DDTHH:mm')
-    close_time = acp_times.close_time(km, 200, arrow.now().isoformat).format('YYYY-MM-DDTHH:mm')
-    result = {"open": open_time, "close": close_time}
-    return flask.jsonify(result=result)
 
+    # Arrow object from start_date string
+    start_arrow = arrow.get(start_date)
+
+    # Ideal case, for when all data is valid
+    # ecode 0 signifies no error at all
+    try:
+        open_time = acp_times.open_time(km, brev_dist, start_arrow).format('YYYY-MM-DDTHH:mm')
+        close_time = acp_times.close_time(km, brev_dist, start_arrow).format('YYYY-MM-DDTHH:mm')
+        result = {"open": open_time, "close": close_time, "ecode": 0}
+        return flask.jsonify(result=result)
+    
+    # Send back an unchanged version of the open and close fields' initial data.
+    # Send back an error code the frontend can translate to a human-readable error message
+    except OverflowError:
+        result = {"open": "mm/dd/yyyy --:-- --", "close": "mm/dd/yyyy --:-- --", "ecode": 1}
+        return flask.jsonify(result=result)
+    except ArithmeticError:
+        result = {"open": "mm/dd/yyyy --:-- --", "close": "mm/dd/yyyy --:-- --", "ecode": 2}
+        return flask.jsonify(result=result)
 
 #############
 
