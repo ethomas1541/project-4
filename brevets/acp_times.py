@@ -17,7 +17,13 @@ from math import modf
 # Originally stored as a tuple of tuples. This is not necessary because min speeds are always either
 # 15km/h or 11.428. Not enough data to warrant storage in a tuple, or even a loop.
 
-brev_maxspeeds = (34, 32, 30, 28)
+brev_table = (
+   (200, 15,      34),
+   (200, 15,      32),
+   (200, 15,      30),
+   (400, 11.428,  28),
+   (300, 13.333,  26)
+)
 
 # Nominal brevet lengths, as shown in the docstrings below
 valid_brev_lens = (200, 300, 400, 600, 1000)
@@ -35,22 +41,21 @@ def open_time(control_dist_km, brevet_dist_km, brevet_start_time):
       This will be in the same time zone as the brevet start time.
    """ 
 
-   if 0 <= control_dist_km <= 1000 and brevet_dist_km in valid_brev_lens and control_dist_km <= brevet_dist_km:
+   if 0 <= control_dist_km <= 1200 and brevet_dist_km in valid_brev_lens and control_dist_km <= brevet_dist_km * 1.2:
       # Time shift expressed as decimal hours (1.5 = 1 hour 30 min)
       timeshift_decimal = 0
 
       # Subtract from this to iterate through the fields of the chart as shown on the website
       cdist_composite = control_dist_km
-      for i in range(4):
+      for i in range(5):
 
-         # First 3 fields increment by 200km each. Last one increments by 400km.
-         if i < 3 and cdist_composite > 200:
-            # Find the given max speed for this distance, divide by speed field of chart
-            timeshift_decimal += 200/brev_maxspeeds[i]
+         if cdist_composite > brev_table[i][0]:
+            timeshift_decimal += brev_table[i][0]/brev_table[i][2]
+            print(f"{i}\t{brev_table[i][0]}/{brev_table[i][2]} -> {timeshift_decimal}")
          else:
-            # There's some remainder if it's less than 200. It's no longer as simple as 200/brev_maxspeeds[i]
-            timeshift_decimal += cdist_composite/brev_maxspeeds[i]
-         cdist_composite -= 200
+            timeshift_decimal += cdist_composite/brev_table[i][2]
+            print(f"{i}\t{cdist_composite}/{brev_table[i][2]} -> {timeshift_decimal}")
+         cdist_composite -= brev_table[i][0]
          if cdist_composite <= 0:
             break
 
@@ -62,13 +67,13 @@ def open_time(control_dist_km, brevet_dist_km, brevet_start_time):
 
       return brevet_start_time.shift(hours = round(tshift_parts[1]), minutes = round(tshift_parts[0] * 60))
 
-   elif not 0 <= control_dist_km <= 1000:
+   elif not 0 <= control_dist_km <= 1200:
       raise OverflowError
    
    elif brevet_dist_km not in valid_brev_lens:
       raise IndexError
    
-   elif control_dist_km > brevet_dist_km:
+   elif control_dist_km > brevet_dist_km * 1.2:
       raise ArithmeticError
 
 def close_time(control_dist_km, brevet_dist_km, brevet_start_time):
@@ -84,27 +89,23 @@ def close_time(control_dist_km, brevet_dist_km, brevet_start_time):
       This will be in the same time zone as the brevet start time.
    """
 
-   if 0 <= control_dist_km <= 1000 and brevet_dist_km in valid_brev_lens and control_dist_km <= brevet_dist_km:
+   if 0 <= control_dist_km <= 1200 and brevet_dist_km in valid_brev_lens and control_dist_km <= brevet_dist_km * 1.2:
       # Time shift expressed as decimal hours (1.5 = 1 hour 30 min)
       timeshift_decimal = 0
 
-      # Same idea as above
       cdist_composite = control_dist_km
-      if cdist_composite > 600:
-         # 600/15 = 40
-         timeshift_decimal += 40
 
-         # Move to 11.428 field
-         cdist_composite -= 600
-      else:
+      for i in range(5):
 
-         # Divide remainder by 15 then continue
-         timeshift_decimal += cdist_composite/15
-         cdist_composite = 0
-
-      # If for any reason this evaluates to true, there's still some remainder. If so, move to 11.428 min speed field
-      if cdist_composite:
-         timeshift_decimal += cdist_composite/11.428
+         if cdist_composite > brev_table[i][0]:
+            timeshift_decimal += brev_table[i][0]/brev_table[i][1]
+            print(f"{i}\t{brev_table[i][0]}/{brev_table[i][1]} -> {timeshift_decimal}")
+         else:
+            timeshift_decimal += cdist_composite/brev_table[i][1]
+            print(f"{i}\t{cdist_composite}/{brev_table[i][1]} -> {timeshift_decimal}")
+         cdist_composite -= brev_table[i][0]
+         if cdist_composite <= 0:
+            break
 
       # Break apart
       tshift_parts = modf(timeshift_decimal)
@@ -112,16 +113,19 @@ def close_time(control_dist_km, brevet_dist_km, brevet_start_time):
       # Debugging
       print(f"{round(tshift_parts[1])}H{str(round(tshift_parts[0] * 60)).zfill(2)}")
 
+      print(brevet_start_time.shift(hours = round(tshift_parts[1]), minutes = round(tshift_parts[0] * 60)))
+
       return brevet_start_time.shift(hours = round(tshift_parts[1]), minutes = round(tshift_parts[0] * 60))
 
-   elif not 0 <= control_dist_km <= 1000:
+   elif not 0 <= control_dist_km <= 1200:
       raise OverflowError
    
    elif not brevet_dist_km in valid_brev_lens:
       raise IndexError
    
-   elif control_dist_km > brevet_dist_km:
+   elif control_dist_km > brevet_dist_km * 1.2:
       raise ArithmeticError
    
-# if __name__ == "__main__":
-   # print(list(range(1, 6)))
+if __name__ == "__main__":
+   open_time(1140, 1000, arrow.get('1970-01-01T00:00:00+00:00'))
+   close_time(1140, 1000, arrow.get('1970-01-01T00:00:00+00:00'))

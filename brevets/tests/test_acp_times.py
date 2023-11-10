@@ -10,6 +10,7 @@ import logging
 import arrow
 
 epoch = arrow.get('1970-01-01T00:00:00+00:00')
+alitime = arrow.get('2011-10-21T11:00:00+00:00')
 
 logging.basicConfig(format='%(levelname)s:%(message)s',
                     level=logging.WARNING)
@@ -58,6 +59,10 @@ def test_website_example_3():
     assert(get_formatted_date(open_time, 890, 1000, epoch) == "1970-01-02 05:09:00")    # 29H09
     assert(get_formatted_date(close_time, 890, 1000, epoch) == "1970-01-03 17:23:00")   # 65H23
 
+
+def test_ali():
+    assert(get_formatted_date(close_time, 1140, 1000, alitime) == "2011-10-25 00:30:00")
+
 # Test numbers that are out of range
 
 def test_bad_numbers():
@@ -68,10 +73,10 @@ def test_bad_numbers():
         close_time(-1, 200, epoch)
 
     with nose.tools.assert_raises(OverflowError):
-        open_time(1001, 200, epoch)
+        open_time(1201, 200, epoch)
     
     with nose.tools.assert_raises(OverflowError):
-        close_time(1001, 200, epoch)
+        close_time(1201, 200, epoch)
 
 # Test lengths that aren't legal
 # 199, 399, 599, 799, 999
